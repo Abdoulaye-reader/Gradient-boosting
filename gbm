@@ -1,0 +1,45 @@
+# Installer le package gbm si ce n'est pas déjà fait
+install.packages("gbm")
+
+library(gbm)
+#le fichier CSV
+data <- read.csv("/framingham.csv")
+
+# Split train test 
+set.seed(123)  # Pour la reproductibilité
+sample <- sample(c(TRUE,FALSE), nrow(data),replace=TRUE,prob=c(0.7,0.3))
+trainData <- data[sample, ]
+testData <- data[-sample, ]
+
+
+# Gradient boosting avec la log-loss
+gbm_model <- gbm(
+  formula = TenYearCHD ~ .,
+  data = trainData,
+  distribution = "bernoulli",  # Log-loss pour la classification binaire
+  n.trees = 100,               # Nombre d'arbres
+  interaction.depth = 3,       # Profondeur d'interaction maximale
+  shrinkage = 0.01,            # Taux d'apprentissage
+  cv.folds = 5,                # Validation croisée avec 5 plis
+  n.minobsinnode = 10,         # Nombre minimum d'observations dans les nœuds terminaux
+  verbose = FALSE              # Ne pas afficher les détails de la formation
+)
+
+# Résumé du modèle
+#summary(gbm_model)
+
+# Prédiction sur l'ensemble de test
+predictions <- predict(gbm_model, newdata = testData, n.trees = gbm_model$n.trees, type = "response")
+
+# Convertir les prédictions en classes binaires
+predicted_classes <- ifelse(predictions > 0.5, 1, 0)
+
+# performances du modèle
+# Calculer le log-loss
+log_loss <- -mean(testData$TenYearCHD * log(predictions) + (1 - testData$TenYearCHD) * log(1 - predictions))
+#la précision
+accuracy <- mean(predicted_classes == testData$TenYearCHD)
+
+# Afficher les résultats
+print(paste("Log-Loss:", log_loss))
+print(paste("Accuracy:", accuracy))
