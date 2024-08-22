@@ -1,7 +1,8 @@
-# Installer le package gbm 
+# les packages necessaires
 install.packages("gbm")
-
+install.packages("pROC")
 library(gbm)
+library(pROC)
 #le fichier CSV
 data <- read.csv("/framingham.csv")
 
@@ -22,24 +23,34 @@ gbm_model <- gbm(
   shrinkage = 0.01,            # Taux d'apprentissage
   cv.folds = 5,                # Validation croisée avec 5 plis
   n.minobsinnode = 10,         # Nombre minimum d'observations dans les nœuds terminaux
-  verbose = FALSE              # Ne pas afficher les détails de la formation
+  verbose = FALSE              
 )
 
 # Résumé du modèle
 #summary(gbm_model)
 
-# Prédiction sur l'ensemble de test
+# Prédiction sur les données de test
 predictions <- predict(gbm_model, newdata = testData, n.trees = gbm_model$n.trees, type = "response")
 
-# Convertir les prédictions en classes binaires
+# les prédictions en classes binaires
 predicted_classes <- ifelse(predictions > 0.5, 1, 0)
 
-# performances du modèle
-# Calculer le log-loss
+# performances et métriques du modèle
+# Calcul dulog-loss
 log_loss <- -mean(testData$TenYearCHD * log(predictions) + (1 - testData$TenYearCHD) * log(1 - predictions))
 #la précision
 accuracy <- mean(predicted_classes == testData$TenYearCHD)
 
-# Afficher les résultats
+
+# creation de la courbe ROC
+roc_curve <- roc(testData$TenYearCHD, as.numeric(predictions))
+auc_value <- auc(roc_curve)
+
+# Tracer la courbe ROC
+plot(roc_curve, main = "Courbe ROC de TenYearCHD")
+
+# Affichage des métriques
 print(paste("Log-Loss:", log_loss))
 print(paste("Accuracy:", accuracy))
+print(paste("AUC:", auc_value))
+  
